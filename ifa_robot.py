@@ -100,7 +100,16 @@ def main():
             else:
                 form_complete = True
 
-        # TODO continue submitting form
+        # Avoid "can't access dead object" exception by switching back to the main frame
+        driver.switch_to.default_content()
+
+        add_attachments = (
+            AddAttachmentsSubmit(driver)
+                # This is very slow
+                .wait_for_page(60)
+                .click_submit_button()
+        )
+
         # TODO download results
 
     except Exception as e:
@@ -332,10 +341,21 @@ class Form(Page):
         dialog = self.get_dialog()
         return "hibalista" in dialog.get_header().lower()
 
+class AddAttachmentsSubmit(Page):
+    name = "Csatolmányok hozzáadása"
 
-# TODO
-# Csatolmányok hozzáadása
-# Button / Beküldés
+    SUBMIT_BUTTON = (By.XPATH, '//button[contains(text(), "Beküldés")]')
+    # < button
+    # id = "submitbutton"
+    # type = "submit"
+    #
+    # class ="btn btn-default btn-large btn-nav btn-pay" role="button" > Beküldés < / button >
+
+    CONDITION = expected_conditions.presence_of_element_located(SUBMIT_BUTTON)
+
+    def click_submit_button(self):
+        button = self.driver.find_element(*self.SUBMIT_BUTTON)
+        button.click()
 
 # TODO
 # Sikeres beküldés!
