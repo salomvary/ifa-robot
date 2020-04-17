@@ -8,12 +8,14 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support.select import Select
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.keys import Keys
 import geckodriver_autoinstaller
 import code
 import time
+from form_data import elolap_data, folap_data, b_betetlap_data
 
 geckodriver_autoinstaller.install()
-
 
 def main():
     config = configparser.ConfigParser()
@@ -33,7 +35,7 @@ def main():
             KAU(driver)
                 .wait_for_page()
                 # Clicking immediately does not work
-                .sleep(1)
+                .sleep(5)
                 .click_login_with_ugyfelkapu()
         )
 
@@ -41,9 +43,9 @@ def main():
             KAULogin(driver)
                 .wait_for_page()
                 .login(
-                    config['DEFAULT']['username'],
-                    config['DEFAULT']['password'],
-                )
+                config['DEFAULT']['username'],
+                config['DEFAULT']['password'],
+            )
         )
 
         kau_login = (
@@ -56,10 +58,10 @@ def main():
             Ugyinditas(driver)
                 .wait_for_page()
                 .select_case(
-                    "Saját néven (magánszemélyként)",
-                    "Adóügy",
-                    "idegenforgalmi adó"
-                )
+                "Saját néven (magánszemélyként)",
+                "Adóügy",
+                "idegenforgalmi adó"
+            )
         )
 
         ugyinditas_results = (
@@ -71,11 +73,17 @@ def main():
         form = (
             Form(driver)
                 .wait_for_page()
+                # Wait form the form to fully load
+                .wait_for_progress_dialog_invisible()
+                # Dismiss non-actianable dialogs
+                .dismiss_alert()
+                # Fill the form automatically
+                .fill_fields(elolap_data)
+                .click_next_chapter()
+                .fill_fields(folap_data)
+                .click_next_chapter()
+                .fill_fields(b_betetlap_data)
         )
-
-        # TODO: wait form the form to fully load
-        # TODO: dismiss non-actianable dialogs
-        # TODO: fill the form automatically
 
         form_complete = False
 
@@ -113,7 +121,7 @@ class Page:
     def __init__(self, driver):
         self.driver = driver
 
-    def wait_for_page(self, timeout = 10):
+    def wait_for_page(self, timeout=10):
         WebDriverWait(self.driver, timeout).until(self.CONDITION)
         logging.info(f"{self.name} loaded")
 
@@ -200,20 +208,21 @@ class Ugyinditas(Page):
 
     def select_case(self, szerepkor, sector, case_type):
         Select(self.driver \
-            .find_element(*self.SZEREPKOR_SELECT)) \
+               .find_element(*self.SZEREPKOR_SELECT)) \
             .select_by_visible_text(szerepkor)
 
         Select(self.driver \
-            .find_element(*self.SECTOR_SELECT)) \
+               .find_element(*self.SECTOR_SELECT)) \
             .select_by_visible_text(sector)
 
         Select(self.driver \
-            .find_element(*self.CASE_TYPE_SELECT)) \
+               .find_element(*self.CASE_TYPE_SELECT)) \
             .select_by_visible_text(case_type)
 
         self.driver \
             .find_element(*self.SUBMIT_BUTTON) \
             .click()
+
 
 class UgyinditasResults(Page):
     name = "Ügyindítás találatok"
@@ -225,6 +234,7 @@ class UgyinditasResults(Page):
     def click_last_fill_button(self):
         buttons = self.driver.find_elements(*self.FILL_BUTTON)
         buttons[-1].click()
+
 
 class Form(Page):
     name = "Űrlap"
@@ -257,7 +267,54 @@ class Form(Page):
         return self
 
     def get_dialog(self):
-        return ModalDialog(self.driver)
+        return ModalDialog(self.driver, wait_for_visible_timeout=5)
+
+    def wait_for_progress_dialog_invisible(self):
+        current_dialog = self.get_dialog()
+        if current_dialog:
+            logging.info(
+                f"Dialog visible:\nheader: '{current_dialog.get_header()}'\nbody:\n{current_dialog.get_body()}"
+            )
+
+            if "feldolgozás folyamatban" in current_dialog.get_header().lower():
+                current_dialog.wait_for_invisible(30)
+        return self
+
+    def dismiss_alert(self):
+        dialog = AlertDialog(self.driver)
+        if "Az Alaprendelkezés lekérdezése eredménytelen volt" in dialog.get_content():
+            dialog.click_button("Bezárás")
+            logging.info("Dismissed expected alert")
+        else:
+            logging.warning(f"Unexpected alert visible: '{dialog.get_content}'")
+
+        return self
+
+    def fill_fields(self, fields):
+        for selector, value in fields.items():
+            input = self.driver.find_element(By.CSS_SELECTOR, selector)
+            logging.info(
+                f"Setting form field {selector} ({input.tag_name}) to '{value}'"
+            )
+            if input.tag_name == "SELECT":
+                Select(input).select_by_value(value)
+            elif input.get_attribute("data-mask"):
+                # Typing into "mask" inputs (eg. tax id) does not work without extra treatment
+                self.type_mask(input, value)
+            else:
+                input.send_keys(value)
+            self.sleep(1)
+
+        return self
+
+    def type_mask(self, input, value):
+        # Move to the input and focus it
+        input.click()
+        # Mask input only works if the cursor is at the beginning
+        input.send_keys(Keys.HOME)
+        for c in value:
+            # Batch-performing with ActionChain did not work here
+            ActionChains(self.driver).key_down(c).perform()
 
     def confirm_submit_dialog(self):
         dialog = self.get_dialog()
@@ -276,14 +333,24 @@ class Form(Page):
         return "hibalista" in dialog.get_header().lower()
 
 
-class ModalDialog:
+# TODO
+# Csatolmányok hozzáadása
+# Button / Beküldés
 
+# TODO
+# Sikeres beküldés!
+
+class ModalDialog:
     ALERTDIALOG = (By.XPATH, "//*[@role='alertdialog']")
     MODAL_BODY = (By.CLASS_NAME, 'modal-body')
     MODAL_HEADER = (By.CLASS_NAME, 'modal-header')
 
-    def __init__(self, driver):
+    CONDITION = expected_conditions.presence_of_element_located(ALERTDIALOG)
+
+    def __init__(self, driver, wait_for_visible_timeout=0):
         self.driver = driver
+        if wait_for_visible_timeout > 0:
+            WebDriverWait(self.driver, wait_for_visible_timeout).until(self.CONDITION)
         self.element = self.driver.find_element(*self.ALERTDIALOG)
 
     def _select_button(self, text):
@@ -295,10 +362,42 @@ class ModalDialog:
     def get_header(self):
         return self.element.find_element(*self.MODAL_HEADER).text
 
+    def wait_for_invisible(self, timeout):
+        WebDriverWait(self.driver, timeout).until(
+            expected_conditions.invisibility_of_element(self.element)
+        )
+        return self
+
     def click_button(self, button_text):
         self.element.find_element(*self._select_button(button_text)).click()
 
         return self
+
+
+# Another kind of dialog
+class AlertDialog:
+    ALERTDIALOG = (By.XPATH, "//*[@role='dialog']")
+    TITLE = (By.CLASS_NAME, 'ui-dialog-title')
+    CONTENT = (By.CLASS_NAME, 'ui-dialog-content')
+
+    def __init__(self, driver):
+        self.driver = driver
+        self.element = self.driver.find_element(*self.ALERTDIALOG)
+
+    def _select_button(self, text):
+        return (By.XPATH, f'//button[contains(., "{text}")]')
+
+    def get_title(self):
+        return self.element.find_element(*self.TITLE).text
+
+    def get_content(self):
+        return self.element.find_element(*self.CONTENT).text
+
+    def click_button(self, button_text):
+        self.element.find_element(*self._select_button(button_text)).click()
+
+        return self
+
 
 if __name__ == "__main__":
     main()
