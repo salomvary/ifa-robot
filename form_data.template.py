@@ -17,8 +17,7 @@ elolap_data = {
 
     "#ASP_CONSIGNER_EMAIL": "me@example.com",
     "#ASP_CONSIGNER_TEL": "+36 20 123 4567",
-    # This is hidden, setting does not work
-    # "#ASP_CONSIGNER_ECONTACT": "1 # Select option: Engedélyezve",
+    "#ASP_CONSIGNER_ECONTACT-button": "Engedélyezve",
 }
 
 folap_data = {
