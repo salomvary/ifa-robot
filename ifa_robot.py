@@ -17,72 +17,58 @@ from form_data import elolap_data, folap_data, b_betetlap_data
 
 geckodriver_autoinstaller.install()
 
+
 def main():
     config = configparser.ConfigParser()
-    config.read('ifa-robot.ini')
+    config.read("ifa-robot.ini")
 
     try:
         driver = webdriver.Firefox()
         driver.get("https://ohp-20.asp.lgov.hu")
 
-        nyitolap = (
-            Nyitolap(driver)
-                .wait_for_page()
-                .click_login_button()
-        )
+        nyitolap = Nyitolap(driver).wait_for_page().click_login_button()
 
         kau = (
             KAU(driver)
-                .wait_for_page()
-                # Clicking immediately does not work
-                .sleep(5)
-                .click_login_with_ugyfelkapu()
+            .wait_for_page()
+            # Clicking immediately does not work
+            .sleep(5)
+            .click_login_with_ugyfelkapu()
         )
 
         kau_login = (
             KAULogin(driver)
-                .wait_for_page()
-                .login(
-                config['DEFAULT']['username'],
-                config['DEFAULT']['password'],
-            )
+            .wait_for_page()
+            .login(config["DEFAULT"]["username"], config["DEFAULT"]["password"],)
         )
 
-        kau_login = (
-            Welcome(driver)
-                .wait_for_page()
-                .click_ugyinditas()
-        )
+        kau_login = Welcome(driver).wait_for_page().click_ugyinditas()
 
         ugyinditas = (
             Ugyinditas(driver)
-                .wait_for_page()
-                .select_case(
-                "Saját néven (magánszemélyként)",
-                "Adóügy",
-                "idegenforgalmi adó"
+            .wait_for_page()
+            .select_case(
+                "Saját néven (magánszemélyként)", "Adóügy", "idegenforgalmi adó"
             )
         )
 
         ugyinditas_results = (
-            UgyinditasResults(driver)
-                .wait_for_page()
-                .click_last_fill_button()
+            UgyinditasResults(driver).wait_for_page().click_last_fill_button()
         )
 
         form = (
             Form(driver)
-                .wait_for_page()
-                # Wait form the form to fully load
-                .wait_for_progress_dialog_invisible()
-                # Dismiss non-actianable dialogs
-                .dismiss_alert()
-                # Fill the form automatically
-                .fill_fields(elolap_data)
-                .click_next_chapter()
-                .fill_fields(folap_data)
-                .click_next_chapter()
-                .fill_fields(b_betetlap_data)
+            .wait_for_page()
+            # Wait form the form to fully load
+            .wait_for_progress_dialog_invisible()
+            # Dismiss non-actianable dialogs
+            .dismiss_alert()
+            # Fill the form automatically
+            .fill_fields(elolap_data)
+            .click_next_chapter()
+            .fill_fields(folap_data)
+            .click_next_chapter()
+            .fill_fields(b_betetlap_data)
         )
 
         form_complete = False
@@ -91,9 +77,7 @@ def main():
 
             input("Fill in the form, hit ENTER when you are done > ")
 
-            form.click_more() \
-                .click_submit() \
-                .confirm_submit_dialog()
+            form.click_more().click_submit().confirm_submit_dialog()
 
             if form.has_errors():
                 print("Looks like the form has some errors :(")
@@ -105,9 +89,8 @@ def main():
 
         add_attachments = (
             AddAttachmentsSubmit(driver)
-                # This is very slow
-                .wait_for_page(60)
-                .click_submit_button()
+            # This is very slow
+            .wait_for_page(60).click_submit_button()
         )
 
         # TODO download results
@@ -131,10 +114,24 @@ class Page:
         self.driver = driver
 
     def wait_for_page(self, timeout=10):
-        WebDriverWait(self.driver, timeout).until(self.CONDITION)
+        self.wait_until(timeout, self.CONDITION)
         logging.info(f"{self.name} loaded")
 
         return self
+
+    def wait_until(self, timeout, condition):
+        should_try = True
+
+        while should_try:
+            try:
+                WebDriverWait(self.driver, timeout).until(condition)
+                should_try = False
+            except:
+                print(
+                    f"Waiting for this condition timed out after {timeout}: ${condition}."
+                )
+                answer = input("Would you like to try again? [Y/n]> ")
+                should_try = answer.lower() == "y"
 
     def sleep(self, duration):
         time.sleep(duration)
@@ -173,7 +170,7 @@ class KAU(Page):
 class KAULogin(Page):
     name = "KAÜ Login"
 
-    LOGIN_BUTTON = (By.XPATH, '//button[contains(text(), "belépés")]')
+    LOGIN_BUTTON = (By.XPATH, '//button[contains(text(), "bejelentkezés")]')
     USERNAME_INPUT = (By.NAME, "felhasznaloNev")
     PASSWORD_INPUT = (By.NAME, "jelszo")
 
@@ -216,21 +213,21 @@ class Ugyinditas(Page):
     CONDITION = expected_conditions.presence_of_element_located(SUBMIT_BUTTON)
 
     def select_case(self, szerepkor, sector, case_type):
-        Select(self.driver \
-               .find_element(*self.SZEREPKOR_SELECT)) \
-            .select_by_visible_text(szerepkor)
+        Select(self.driver.find_element(*self.SZEREPKOR_SELECT)).select_by_visible_text(
+            szerepkor
+        )
 
-        Select(self.driver \
-               .find_element(*self.SECTOR_SELECT)) \
-            .select_by_visible_text(sector)
+        Select(self.driver.find_element(*self.SECTOR_SELECT)).select_by_visible_text(
+            sector
+        )
 
-        Select(self.driver \
-               .find_element(*self.CASE_TYPE_SELECT)) \
-            .select_by_visible_text(case_type)
+        Select(self.driver.find_element(*self.CASE_TYPE_SELECT)).select_by_visible_text(
+            case_type
+        )
 
-        self.driver \
-            .find_element(*self.SUBMIT_BUTTON) \
-            .click()
+        self.driver.find_element(*self.SUBMIT_BUTTON).click()
+
+        return self
 
 
 class UgyinditasResults(Page):
@@ -244,6 +241,8 @@ class UgyinditasResults(Page):
         buttons = self.driver.find_elements(*self.FILL_BUTTON)
         buttons[-1].click()
 
+        return self
+
 
 class Form(Page):
     name = "Űrlap"
@@ -254,11 +253,15 @@ class Form(Page):
     MAIN_FRAME = (By.ID, "iform-iframe")
 
     CONDITION = expected_conditions.presence_of_element_located(NEXT_CHAPTER_BUTTON)
-    IFRAME_CONDITION = expected_conditions.frame_to_be_available_and_switch_to_it(MAIN_FRAME)
+    IFRAME_CONDITION = expected_conditions.frame_to_be_available_and_switch_to_it(
+        MAIN_FRAME
+    )
 
     def wait_for_page(self):
-        WebDriverWait(self.driver, 10).until(self.IFRAME_CONDITION)
-        return super().wait_for_page(30)
+        self.wait_until(10, self.IFRAME_CONDITION)
+        super().wait_for_page(30)
+
+        return self
 
     def click_next_chapter(self):
         self.driver.find_element(*self.NEXT_CHAPTER_BUTTON).click()
@@ -277,6 +280,13 @@ class Form(Page):
 
     def get_dialog(self):
         return ModalDialog(self.driver, wait_for_visible_timeout=5)
+    
+    def has_dialog(self):
+        try:
+            ModalDialog(self.driver)
+            return True
+        except:
+            return False
 
     def wait_for_progress_dialog_invisible(self):
         current_dialog = self.get_dialog()
@@ -312,7 +322,10 @@ class Form(Page):
                 self.type_mask(input, value)
             else:
                 input.send_keys(value)
-            self.sleep(1)
+            # Interacting with inputs might bring up the progress dialog which
+            # obscures the "next chapter buttons". Wait until it goes away
+            if self.has_dialog():
+                self.wait_for_progress_dialog_invisible()
 
         return self
 
@@ -330,16 +343,14 @@ class Form(Page):
         dialog_body = dialog.get_body()
         dialog.click_button("Igen")
 
-        logging.info(
-            "Confirmed dialog with the following text:" +
-            dialog_body
-        )
+        logging.info("Confirmed dialog with the following text:" + dialog_body)
 
         return self
 
     def has_errors(self):
         dialog = self.get_dialog()
         return "hibalista" in dialog.get_header().lower()
+
 
 class AddAttachmentsSubmit(Page):
     name = "Csatolmányok hozzáadása"
@@ -357,20 +368,24 @@ class AddAttachmentsSubmit(Page):
         button = self.driver.find_element(*self.SUBMIT_BUTTON)
         button.click()
 
+        return self
+
+
 # TODO
 # Sikeres beküldés!
 
-class ModalDialog:
+
+class ModalDialog(Page):
     ALERTDIALOG = (By.XPATH, "//*[@role='alertdialog']")
-    MODAL_BODY = (By.CLASS_NAME, 'modal-body')
-    MODAL_HEADER = (By.CLASS_NAME, 'modal-header')
+    MODAL_BODY = (By.CLASS_NAME, "modal-body")
+    MODAL_HEADER = (By.CLASS_NAME, "modal-header")
 
     CONDITION = expected_conditions.presence_of_element_located(ALERTDIALOG)
 
     def __init__(self, driver, wait_for_visible_timeout=0):
         self.driver = driver
         if wait_for_visible_timeout > 0:
-            WebDriverWait(self.driver, wait_for_visible_timeout).until(self.CONDITION)
+            self.wait_until(wait_for_visible_timeout, self.CONDITION)
         self.element = self.driver.find_element(*self.ALERTDIALOG)
 
     def _select_button(self, text):
@@ -383,8 +398,8 @@ class ModalDialog:
         return self.element.find_element(*self.MODAL_HEADER).text
 
     def wait_for_invisible(self, timeout):
-        WebDriverWait(self.driver, timeout).until(
-            expected_conditions.invisibility_of_element(self.element)
+        self.wait_until(
+            timeout, expected_conditions.invisibility_of_element(self.element)
         )
         return self
 
@@ -395,10 +410,10 @@ class ModalDialog:
 
 
 # Another kind of dialog
-class AlertDialog:
+class AlertDialog(Page):
     ALERTDIALOG = (By.XPATH, "//*[@role='dialog']")
-    TITLE = (By.CLASS_NAME, 'ui-dialog-title')
-    CONTENT = (By.CLASS_NAME, 'ui-dialog-content')
+    TITLE = (By.CLASS_NAME, "ui-dialog-title")
+    CONTENT = (By.CLASS_NAME, "ui-dialog-content")
 
     def __init__(self, driver):
         self.driver = driver
