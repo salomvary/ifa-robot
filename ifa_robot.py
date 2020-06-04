@@ -132,7 +132,7 @@ class Page:
                 should_try = False
             except:
                 print(
-                    f"Waiting for this condition timed out after {timeout}: ${condition}."
+                    f"Waiting for this condition timed out after {timeout}: ${condition.__dict__}."
                 )
                 answer = input("Would you like to try again? [Y/n]> ")
                 should_try = answer.lower() == "y"
