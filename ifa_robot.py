@@ -110,6 +110,9 @@ def main():
             driver.quit()
 
 
+def by_partial_button_text(text: str):
+    return (By.XPATH, f'//button[contains(text(), "{text}")] | //input[(@type="submit" or @type="button" or @type="reset" or @type="search") and contains(@value, "{text}")]')
+
 class Page:
     def __init__(self, driver):
         self.driver = driver
@@ -160,7 +163,7 @@ class Nyitolap(Page):
 class KAU(Page):
     name = "KAÜ"
 
-    UGYFELKAPU_BUTTTON = (By.XPATH, '//button[contains(text(), "Ügyfélkapu")]')
+    UGYFELKAPU_BUTTTON = by_partial_button_text("Ügyfélkapu")
 
     CONDITION = expected_conditions.presence_of_element_located(UGYFELKAPU_BUTTTON)
 
