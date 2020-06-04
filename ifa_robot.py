@@ -1,4 +1,5 @@
 import logging
+import sys
 
 logging.basicConfig(level=logging.INFO)
 
@@ -132,6 +133,9 @@ class Page:
                 )
                 answer = input("Would you like to try again? [Y/n]> ")
                 should_try = answer.lower() == "y"
+                if not should_try:
+                    sys.exit(1)
+
 
     def sleep(self, duration):
         time.sleep(duration)
