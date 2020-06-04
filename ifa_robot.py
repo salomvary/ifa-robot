@@ -220,9 +220,10 @@ class Ugyinditas(Page):
     CONDITION = expected_conditions.presence_of_element_located(SUBMIT_BUTTON)
 
     def select_case(self, szerepkor, sector, case_type):
-        Select(self.driver.find_element(*self.SZEREPKOR_SELECT)).select_by_visible_text(
-            szerepkor
-        )
+        # This is gone in June 2020
+        # Select(self.driver.find_element(*self.SZEREPKOR_SELECT)).select_by_visible_text(
+        #     szerepkor
+        # )
 
         Select(self.driver.find_element(*self.SECTOR_SELECT)).select_by_visible_text(
             sector
