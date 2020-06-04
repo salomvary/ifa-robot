@@ -30,6 +30,6 @@ b_betetlap_data = {
     "#B_IdegenForgBevallasBetetlapList_Cim_KozteruletNev\\:0": "Petőfi",
     "#B_IdegenForgBevallasBetetlapList_Cim_Hazszam\\:0": "1",
     "#B_IdegenForgBevallasBetetlapList_Cim_Emelet\\:0": "2",
-    "#B_IdegenForgBevallasBetetlapList_Cim_Ajtoto\\:0": "3",
+    "#B_IdegenForgBevallasBetetlapList_Cim_Ajto\\:0": "3",
     "#B_IdegenForgBevallasBetetlapList_Cim_HelyrajziSzam\\:0": "123456A12",
 }
