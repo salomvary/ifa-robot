@@ -212,7 +212,7 @@ class Welcome(Page):
 class Ugyinditas(Page):
     name = "Ügyindítás"
 
-    SUBMIT_BUTTON = (By.XPATH, '//button[contains(text(), "Űrlap keresés")]')
+    SUBMIT_BUTTON = (By.XPATH, '//button[contains(text(), "Űrlap kereső")]')
     SZEREPKOR_SELECT = (By.NAME, "kepviselet.szerepkor")
     SECTOR_SELECT = (By.NAME, "sector")
     CASE_TYPE_SELECT = (By.NAME, "caseType")
