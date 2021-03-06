@@ -11,6 +11,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support.select import Select
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
+from selenium.common.exceptions import StaleElementReferenceException
 import geckodriver_autoinstaller
 import code
 import time
@@ -303,8 +304,15 @@ class Form(Page):
                 f"Dialog visible:\nheader: '{current_dialog.get_header()}'\nbody:\n{current_dialog.get_body()}"
             )
 
-            if "feldolgozás folyamatban" in current_dialog.get_header().lower():
-                current_dialog.wait_for_invisible(30)
+            try:
+                if "feldolgozás folyamatban" in current_dialog.get_header().lower():
+                    current_dialog.wait_for_invisible(30)
+            except StaleElementReferenceException:
+                # The dialog might get hidden by the time we get here,
+                # ignore the exception thrown when trying to interact
+                # with a stale object
+                pass
+
         return self
 
     def dismiss_alert(self):
