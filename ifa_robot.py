@@ -141,8 +141,8 @@ class Page:
                     sys.exit(1)
 
 
-    def sleep(self, duration):
-        time.sleep(duration)
+    def sleep(self, duration_seconds):
+        time.sleep(duration_seconds)
 
         return self
 
@@ -339,7 +339,9 @@ class Form(Page):
             else:
                 input.send_keys(value)
             # Interacting with inputs might bring up the progress dialog which
-            # obscures the "next chapter buttons". Wait until it goes away
+            # obscures the "next chapter buttons". Wait until it goes away.
+            # Alsow wait a bit before checking for the dialog as it might not immediately show up.
+            self.sleep(1)
             if self.has_dialog():
                 self.wait_for_progress_dialog_invisible()
 
