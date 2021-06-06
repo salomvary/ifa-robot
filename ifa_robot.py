@@ -44,7 +44,11 @@ def main():
             .login(config["DEFAULT"]["username"], config["DEFAULT"]["password"],)
         )
 
-        kau_login = Welcome(driver).wait_for_page().click_ugyinditas()
+        kau_login = (
+                Welcome(driver)
+                .wait_for_page()
+                .click_ugyinditas()
+        )
 
         ugyinditas = (
             Ugyinditas(driver)
@@ -199,7 +203,8 @@ class KAULogin(Page):
 class Welcome(Page):
     name = "Nyitólap bejelentkezve"
 
-    UGYINDITAS_BUTTON = (By.PARTIAL_LINK_TEXT, "ÜGYINDÍTÁS")
+    # Using PARTIAL_LINK_TEXT results in a false positive for "Ügyindítás, űrlapok"
+    UGYINDITAS_BUTTON = (By.LINK_TEXT, "ÜGYINDÍTÁS")
 
     CONDITION = expected_conditions.presence_of_element_located(UGYINDITAS_BUTTON)
 
